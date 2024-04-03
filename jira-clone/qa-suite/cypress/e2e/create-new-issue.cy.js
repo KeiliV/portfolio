@@ -1,80 +1,76 @@
-import CreateNewIssue from "../pages/createNewIssueModal";
-
-//creating an instance of the class
-const createNewIssue = new CreateNewIssue();
+import KanbanPage from "../pages/kanban";
 
 describe("New issue creation", () => {
   beforeEach(() => {
-    cy.visit("/");
-    cy.url()
-      .should("eq", `${Cypress.env("baseUrl")}project/board`)
-      .then((url) => {
-        // System will already open issue creating modal in beforeEach block
-        cy.visit(url + "/board?modal-issue-create=true");
-      });
+    const page = new KanbanPage();
+    page.visit();
+    const createIssueForm = page.clickCreateIssueButton();
+    cy.wrap(page).as("page");
+    cy.wrap(createIssueForm).as("createIssueForm");
   });
 
-  const issueTitleName = "Test issue title";
-  const issueTitleWithSpaces = "  This is a test issue for spaces";
-  const requiredFieldErrorMessage = '"This field is required"';
+  const requiredFieldErrorMessage = "This field is required";
 
-  const issueDetails = {
-    title: issueTitleName,
+  const onlyRequiredIssueDetails = {
+    title: "Only required fields issue title",
     description: "this is a description",
   };
 
-  it("Should create and issue with minimal required fields and validate it succesfully", () => {
-    createNewIssue.createNewIssueOnlyRequiredFields(issueDetails);
-    createNewIssue.validateNewIssueIsVisibleOnBoard(issueDetails);
+  const allFiedlsFilledIssueDetails = {
+    title: "Title for all fields filled issue test",
+    description: "this is a description",
+    assigneeSelector: '[data-testid="select-option:Pickle Rick"]',
+  };
+
+  const issueDetailsTitleWithSpaces = {
+    title: "     This title has spaces",
+  };
+
+  it("Should create and issue with minimal required fields and validate it succesfully", function () {
+    this.createIssueForm.createNewIssueOnlyRequiredFields(
+      onlyRequiredIssueDetails
+    );
+    this.page.validateCreateIssueFormDoesNotExist();
+    this.page.validateIssueIsVisibleOnBoard(onlyRequiredIssueDetails);
   });
 
-  it("Should create an issue with all fields and validate it succesfully", () => {
-    createNewIssue.createNewIssueAllFields(issueDetails);
-    createNewIssue.validateNewIssueIsVisibleOnBoard(issueDetails);
+  it("Should create an issue with all fields and validate it succesfully", function () {
+    this.createIssueForm.createNewIssueAllFields(allFiedlsFilledIssueDetails);
+    cy.log("Cypress at times does not run test if there is no cy in the test");
+    this.page.validateCreateIssueFormDoesNotExist();
+    this.page.validateIssueIsVisibleOnBoard(allFiedlsFilledIssueDetails);
   });
 
-  it("Should give appropriate error message when required fields are missing", () => {
-    createNewIssue.getCreateIssueModal().within(() => {
-      cy.get(createNewIssue.reporterId).click();
-      cy.get('[data-testid="icon:close"]').click();
+  it("Should give appropriate error message when required fields are missing", function () {
+    this.createIssueForm.clearAllFieldsInCreateIssueForm();
+    this.createIssueForm.submitButton().click();
 
-      cy.get(createNewIssue.issueType).click();
-      cy.get('[data-testid="icon:close"]').click();
+    cy.log("Error validations");
 
-      cy.get(createNewIssue.priorityType).click();
-      cy.get('[data-testid="icon:close"]').click();
-      //need to click somewhere to make submit button visible
-      cy.get(createNewIssue.descriptionField).click();
-
-      cy.get(createNewIssue.submitButton).click();
-
-      //Error Validations
-      cy.get('[data-testid="form-field:type"]').contains(
-        requiredFieldErrorMessage
-      );
-      cy.get('[data-testid="form-field:title"]').contains(
-        requiredFieldErrorMessage
-      );
-      cy.get('[data-testid="form-field:reporterId"]').contains(
-        requiredFieldErrorMessage
-      );
-      cy.get('[data-testid="form-field:priority"]').contains(
-        requiredFieldErrorMessage
-      );
-    });
+    cy.get('[data-testid="form-field:type"]').contains(
+      requiredFieldErrorMessage
+    );
+    cy.get('[data-testid="form-field:title"]').contains(
+      requiredFieldErrorMessage
+    );
+    cy.get('[data-testid="form-field:reporterId"]').contains(
+      requiredFieldErrorMessage
+    );
+    cy.get('[data-testid="form-field:priority"]').contains(
+      requiredFieldErrorMessage
+    );
   });
 
-  it("Should create an issue and remove extra spaces from issue title in board view", () => {
-    createNewIssue.getCreateIssueModal().within(() => {
-      cy.get(createNewIssue.title).wait(1000).type(issueTitleWithSpaces);
-      cy.get(createNewIssue.submitButton).click();
-    });
-    cy.get(createNewIssue.createNewIssueModal).should("not.exist");
+  it.only("Should create an issue and remove extra spaces from issue title in board view", function () {
+    this.createIssueForm.createNewIssueOnlyRequiredFields(
+      issueDetailsTitleWithSpaces
+    );
+    cy.log("Validations");
+    this.page.validateCreateIssueFormDoesNotExist();
     cy.contains("Issue has been successfully created.").should("be.visible");
     cy.reload();
-
-    cy.get(createNewIssue.backlogList).within(() => {
-      cy.get(createNewIssue.issuesList).contains(issueTitleWithSpaces.trim());
-    });
+    this.page.validateIssueExistsInBacklog(
+      issueDetailsTitleWithSpaces.title.trim()
+    );
   });
 });
