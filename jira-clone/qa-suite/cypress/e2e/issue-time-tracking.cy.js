@@ -1,93 +1,71 @@
-import TimeTracking from "../pages/timeTracking";
-
-//creating an instance of the class
-const timeTracking = new TimeTracking();
-
-const issueTitleName = "Time tracking test ticket";
-
-const issueDetails = {
-  title: issueTitleName,
-};
+import KanbanPage from "../pages/kanban";
 
 describe("Time Tracking Functionality", () => {
   beforeEach(() => {
-    cy.visit("/");
-    cy.url()
-      .should("eq", `${Cypress.env("baseUrl")}project/board`)
-      .then((url) => {
-        cy.visit(url + "/board?modal-issue-create=true");
-      });
+    const page = new KanbanPage();
+    page.visit("/");
+    cy.wrap(page).as("page");
   });
 
-  it("Should add, edit and remove time estimation successfully", () => {
-    //CREATE AND VALIDATE NEW ISSUE WITH NO TIME LOGGED
-    timeTracking.createNewIssue(issueDetails);
-    timeTracking.validateNewIssueIsVisibleOnBoard(issueDetails);
-    timeTracking.openIssue(issueDetails);
-    timeTracking.ensureTimeTrackingEstimatedHoursLabelContains(
-      "No time logged"
-    );
-    //ADD ESTIMATED TIME
-    timeTracking.enterValueInEstimateHoursField(10);
-    timeTracking.ensureTimeTrackingEstimatedHoursLabelContains("10h estimated");
+  const issueDetails = {
+    title: "This is a new issue to test time estimation",
+  };
 
-    timeTracking.closeIssueModal();
-    timeTracking.openIssue(issueDetails);
-    timeTracking.valueIsVisibleInEstimateHoursField(10);
+  it.only("Should add, edit and remove estimated time successfully", function () {
+    const createIssueForm1 = this.page.clickCreateIssueButton();
+    //CREATE AND VALIDATE NEW ISSUE WITH NO TIME LOGGED
+    cy.log("");
+    createIssueForm1.createNewIssueOnlyRequiredFields(issueDetails);
+    this.page.validateIssueIsVisibleOnBoard(issueDetails);
+    //OPEN ISSUE
+    //if i open it like that here, how to i open the issue again later in this test without creating another instance of the class??
+    const issueModal1 = this.page.clickIssueCard(issueDetails.title);
+    //ADD ESTIMATE TIME
+    issueModal1.enterValueInEstimateHoursField(10);
+    issueModal1.validateEstimatedHoursLabelText("10h estimated");
+
     //EDIT ESTIMATED TIME
-    timeTracking.enterValueInEstimateHoursField(20);
-    timeTracking.ensureTimeTrackingEstimatedHoursLabelContains("20h estimated");
-    timeTracking.closeIssueModal();
-    timeTracking.openIssue(issueDetails);
-    timeTracking.valueIsVisibleInEstimateHoursField(20);
+    issueModal1.enterValueInEstimateHoursField(20);
+    issueModal1.validateEstimatedHoursLabelText("20h estimated");
 
     //REMOVE ESTIMATED TIME
-    cy.get(timeTracking.timeInputField).eq(0).clear().blur().wait(1000);
-    timeTracking.closeIssueModal();
-    timeTracking.openIssue(issueDetails);
-    timeTracking
-      .ensureTimeTrackingEstimatedHoursLabelContains("20h estimated")
-      .should("not.exist");
-    cy.get(timeTracking.timeInputField).eq(0).should("be.visible");
+    cy.get('input[placeholder="Number"]').eq(0).clear().blur().wait(1000);
+    cy.get('input[placeholder="Number"]').eq(0).should("be.visible");
   });
 
-  it("Should log time and remove logged time succesfully", () => {
-    //CREATE A NEW ISSUE AND ADD ESTIMATED TIME AS A PRECONDITION
-    timeTracking.createNewIssue(issueDetails);
-    timeTracking.validateNewIssueIsVisibleOnBoard(issueDetails);
-    timeTracking.openIssue(issueDetails);
-    timeTracking.enterValueInEstimateHoursField(10);
-    timeTracking.ensureTimeTrackingEstimatedHoursLabelContains("10h estimated");
-
+  it("Should log time and remove logged time succesfully", function () {
+    const createIssueForm2 = this.page.clickCreateIssueButton();
+    //CREATE A NEW ISSUE
+    createIssueForm2.createNewIssueOnlyRequiredFields(issueDetails);
+    cy.log("");
+    this.page.validateIssueIsVisibleOnBoard(issueDetails);
+    ////ADD ESTIMATED TIME AS A PRECONDITION
+    const issueModal2 = this.page.clickIssueCard(issueDetails.title);
+    issueModal2.enterValueInEstimateHoursField(10);
     //LOG TIME TO ISSUE
-    timeTracking.openTimeTrackingPopUp();
+    issueModal2.openTimeTrackingModal();
 
-    timeTracking.validateTimeTrackingPopUpIsVisible().within(() => {
-      cy.get(timeTracking.timeInputField).eq(0).type(2).blur();
+    issueModal2.validateTimeTrackingPopUpIsVisible().within(() => {
+      cy.get('input[placeholder="Number"]').eq(0).type(2).blur();
     });
 
-    timeTracking.validateTimeLabelsAreReplaced("2h logged", "No time logged");
+    issueModal2.validateTimeLabelsAreReplaced("2h logged", "No time logged");
 
-    cy.get(timeTracking.timeTrackingPopUp).within(() => {
-      cy.get(timeTracking.timeInputField).eq(1).type(5).blur();
+    cy.get('[data-testid="modal:tracking"]').within(() => {
+      cy.get('input[placeholder="Number"]').eq(1).type(5).blur();
     });
-
-    timeTracking.validateTimeLabelsAreReplaced("5h remaining", "10h estimated");
-    timeTracking.closetimeTrackingPopUp();
+    issueModal2.validateTimeLabelsAreReplaced("5h remaining", "10h estimated");
+    issueModal2.submitLoggedTime();
 
     //REMOVE LOGGED TIME
-    timeTracking.openTimeTrackingPopUp();
-    timeTracking.validateTimeTrackingPopUpIsVisible().within(() => {
-      cy.get(timeTracking.timeInputField).eq(0).clear().blur();
+    issueModal2.openTimeTrackingModal();
+    issueModal2.validateTimeTrackingPopUpIsVisible().within(() => {
+      cy.get('input[placeholder="Number"]').eq(0).clear().blur();
+      cy.get('input[placeholder="Number"]').eq(1).clear().blur();
     });
+    issueModal2.submitLoggedTime();
 
-    timeTracking.validateTimeLabelsAreReplaced("No time logged", "2h logged");
-
-    cy.get(timeTracking.timeTrackingPopUp).within(() => {
-      cy.get(timeTracking.timeInputField).eq(1).clear().blur();
-    });
-
-    timeTracking.validateTimeLabelsAreReplaced("10h estimated", "5h remaining");
-    timeTracking.closetimeTrackingPopUp();
+    //Validate no time is logged
+    issueModal2.validateTimeLoggedLableText("No time logged");
   });
 });

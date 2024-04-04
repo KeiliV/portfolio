@@ -56,8 +56,4 @@ export default class KanbanPage {
       cy.contains(issueTitle).should("exist");
     });
   }
-
-  openIssueOnBoard(issueTitle) {
-    cy.contains(issueTitle).click();
-  }
 }
