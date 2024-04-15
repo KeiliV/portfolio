@@ -14,13 +14,7 @@ test.beforeEach(async ({ page }) => {
       });
     }
   );
-
   await page.goto("https://conduit.bondaracademy.com/");
-  //log in to the application
-  await page.getByText("Sign in").click();
-  await page.getByRole("textbox", { name: "Email" }).fill("kvutt@email.com");
-  await page.getByRole("textbox", { name: "Password" }).fill("Password123");
-  await page.getByRole("button").click();
 });
 
 test("Should update article title and description successfully ", async ({
@@ -29,6 +23,8 @@ test("Should update article title and description successfully ", async ({
   await page.route(
     "https://conduit-api.bondaracademy.com/api/articles?limit=10&offset=0",
     async (route) => {
+      //must add a wait because PW has a bug in the framework that closing the browser before its acutally able to fulfill the request
+      await page.waitForTimeout(1000);
       const response = await route.fetch(); //with this command I am telling PW to complete the API call and return a result. Saving this response into constant response
       //now I need to get JSON body from this request:
       const responseBody = await response.json();
@@ -56,19 +52,6 @@ test("Should create and delete article successfully", async ({
   page,
   request,
 }) => {
-  const response = await request.post(
-    "https://conduit-api.bondaracademy.com/api/users/login",
-    {
-      //note: in PW for some reason the request body is called data
-      data: {
-        user: { email: "kvutt@email.com", password: "Password123" },
-      },
-    }
-  );
-  //getting access token
-  const responseBody = await response.json();
-  const accessToken = responseBody.user.token;
-
   //CREATE ARTICLE
   const articleResponse = await request.post(
     "https://conduit-api.bondaracademy.com/api/articles/",
@@ -80,9 +63,6 @@ test("Should create and delete article successfully", async ({
           body: "Test body",
           tagList: [],
         },
-      },
-      headers: {
-        Authorization: `Token ${accessToken}`,
       },
     }
   );
@@ -99,4 +79,48 @@ test("Should create and delete article successfully", async ({
   await expect(page.locator("app-article-list h1").first()).not.toContainText(
     "Test title"
   );
+});
+
+test("Should create new article successfully and delete the article via API call", async ({
+  page,
+  request,
+}) => {
+  //Create new article
+  await page.getByText("New Article").click();
+  await page
+    .getByRole("textbox", { name: "Article Title" })
+    .fill("Test article number 2");
+  await page
+    .getByRole("textbox", { name: "What's this article about?" })
+    .fill("This is an article for API test");
+  await page
+    .getByRole("textbox", { name: "Write your article (in markdown)" })
+    .fill("This is article body");
+  await page.getByRole("button", { name: "Publish Article" }).click();
+
+  //intercepting the call of publishing the article and get the slug ID to use after for deleting the article via API:
+  //waiting for the API call to be finished and saving the response into a variable
+  const articleResponse = await page.waitForResponse(
+    "https://conduit-api.bondaracademy.com/api/articles/"
+  );
+  //getting the article response body and saving it into a variable:
+  const articleResponseBody = await articleResponse.json();
+  //from  JSON response body getting the slug ID:
+  const slugId = articleResponseBody.article.slug;
+
+  //Validate article was created
+  await expect(page.locator(".article-page h1")).toContainText(
+    "Test article number 2"
+  );
+  //Validate article is visible on Global feed page
+  await page.getByText("Home").click();
+  await page.getByText("Global Feed").click();
+  await expect(page.locator("app-article-list h1").first()).toContainText(
+    "Test article number 2"
+  );
+
+  const deleteArticleResponse = await request.delete(
+    `https://conduit-api.bondaracademy.com/api/articles/${slugId}`
+  );
+  expect(deleteArticleResponse.status()).toEqual(204);
 });
