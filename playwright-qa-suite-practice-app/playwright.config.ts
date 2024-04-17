@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-//require("dotenv").config();
+//enables reading of the .env file
+require("dotenv").config();
 
 export default defineConfig({
   timeout: 40000,
