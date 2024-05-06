@@ -1,5 +1,5 @@
 //firstly import test method from playwright library
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { PageManager } from "../page-objects/pageManager";
 //import { faker } from "@faker-js/faker";
 
@@ -14,6 +14,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("example:Should fill Basic form and click on submit button successfully", async ({}) => {
-  //const pageManager = new PageManager(page);
-  await pageManager.onFormLayoutsPage().fillAndSubmitBasicForm();
+  await pageManager
+    .onFormLayoutsPage()
+    .fillAndSubmitBasicForm("email@email.com", "password");
+});
+
+test("Should fill Inline Form fields and click on submit button successfully", async ({}) => {
+  await pageManager
+    .onFormLayoutsPage()
+    .fillInlineFormFieldsAndSubmit("Jane Doe", "email@email.com");
 });
