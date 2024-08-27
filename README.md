@@ -1,3 +1,11 @@
-# Keili Vutt projects portfolio
+# Projects Portfolio
 
-## Table of Contents
+This is collection of automated tests created by Keili Vutt
+
+Tools used:
+Cypress
+Playwright
+
+Languages used:
+JavaScript
+TypeScript
